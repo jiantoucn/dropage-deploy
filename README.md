@@ -10,7 +10,7 @@
 
 ## English
 
-Upload an HTML page or zip archive to [dropage.online](https://dropage.online) and get a public URL that expires in 1 hour.
+Upload an HTML page or zip archive to [dropage.online](https://dropage.online) and get a public URL. You can choose from multiple expiry times and optional visit limits.
 
 ### Triggers
 
@@ -27,8 +27,21 @@ Use this skill when the user asks to:
 Send an `.html` file or a `.zip` archive (with `index.html` at the root) to deploy:
 
 ```bash
+# Default: 1 hour expiry, unlimited visits
 curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
 ```
+
+```bash
+# With custom expiry and visit limit
+curl.exe -s -F "file=@your-file.html" -F "expiry=10m" -F "max_visits=1" https://dropage.online/api/upload
+```
+
+### Optional Fields
+
+| Field | Values | Default | Description |
+| --- | --- | --- | --- |
+| `expiry` | `10m`, `1h`, `3h`, `12h` | `1h` | How long the page stays active before expiring |
+| `max_visits` | `0` (unlimited), `1`, `10` | `0` | Page becomes inactive after this many visits |
 
 ### Success Response (HTTP 201)
 
@@ -37,6 +50,7 @@ curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
   "success": true,
   "url": "https://dropage.online/{id}/",
   "expires_at": "...",
+  "max_visits": 0,
   "id": "..."
 }
 ```
@@ -62,7 +76,22 @@ curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
 ### Notes
 
 - On success, the public URL and expiration time will be displayed.
+- If `max_visits` is set (1 or 10), the page will be disabled after that many visits.
+- Expired records are physically deleted from the server after 24 hours.
 - On HTTP 429 (rate limited), wait and retry.
+
+### Examples
+
+```bash
+# 10-minute expiry, deleted after 1 visit
+curl.exe -s -F "file=@index.html" -F "expiry=10m" -F "max_visits=1" https://dropage.online/api/upload
+
+# 3-hour expiry, unlimited visits
+curl.exe -s -F "file=@site.zip" -F "expiry=3h" https://dropage.online/api/upload
+
+# 12-hour expiry, deleted after 10 visits
+curl.exe -s -F "file=@page.html" -F "expiry=12h" -F "max_visits=10" https://dropage.online/api/upload
+```
 
 ---
 
@@ -70,7 +99,7 @@ curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
 
 ## 中文
 
-将 HTML 页面或 zip 压缩包上传到 [dropage.online](https://dropage.online)，获取一个 1 小时内有效的公开链接。
+将 HTML 页面或 zip 压缩包上传到 [dropage.online](https://dropage.online)，获取一个公开链接。支持多种有效期和可选的访问次数限制。
 
 ### 触发条件
 
@@ -87,8 +116,21 @@ curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
 发送 `.html` 文件或 `.zip` 压缩包（根目录需包含 `index.html`）进行部署：
 
 ```bash
+# 默认：1 小时有效，不限访问次数
 curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
 ```
+
+```bash
+# 自定义有效期和访问次数
+curl.exe -s -F "file=@your-file.html" -F "expiry=10m" -F "max_visits=1" https://dropage.online/api/upload
+```
+
+### 可选参数
+
+| 参数 | 可选值 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `expiry` | `10m`, `1h`, `3h`, `12h` | `1h` | 页面有效时长 |
+| `max_visits` | `0`（不限）, `1`, `10` | `0` | 页面被访问多少次后失效 |
 
 ### 成功响应 (HTTP 201)
 
@@ -97,6 +139,7 @@ curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
   "success": true,
   "url": "https://dropage.online/{id}/",
   "expires_at": "...",
+  "max_visits": 0,
   "id": "..."
 }
 ```
@@ -122,7 +165,22 @@ curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
 ### 说明
 
 - 成功时会显示公开链接和过期时间。
+- 若设置 `max_visits`（1 或 10），页面在达到指定访问次数后自动失效。
+- 过期的记录会在 24 小时后从服务器物理删除。
 - 遇到 HTTP 429（频率限制）时请稍后重试。
+
+### 示例
+
+```bash
+# 10 分钟有效，访问 1 次后失效
+curl.exe -s -F "file=@index.html" -F "expiry=10m" -F "max_visits=1" https://dropage.online/api/upload
+
+# 3 小时有效，不限访问次数
+curl.exe -s -F "file=@site.zip" -F "expiry=3h" https://dropage.online/api/upload
+
+# 12 小时有效，访问 10 次后失效
+curl.exe -s -F "file=@page.html" -F "expiry=12h" -F "max_visits=10" https://dropage.online/api/upload
+```
 
 ---
 
@@ -130,7 +188,7 @@ curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
 
 ## 日本語
 
-HTML ページまたは zip アーカイブを [dropage.online](https://dropage.online) にアップロードし、1 時間有効な公開 URL を取得します。
+HTML ページまたは zip アーカイブを [dropage.online](https://dropage.online) にアップロードし、公開 URL を取得します。複数の有効期限とオプションのアクセス制限を選択できます。
 
 ### トリガー条件
 
@@ -147,8 +205,21 @@ HTML ページまたは zip アーカイブを [dropage.online](https://dropage.
 `.html` ファイルまたは `.zip` アーカイブ（ルートに `index.html` が必要）を送信してデプロイ：
 
 ```bash
+# デフォルト：1時間有効、アクセス無制限
 curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
 ```
+
+```bash
+# 有効期限とアクセス制限をカスタマイズ
+curl.exe -s -F "file=@your-file.html" -F "expiry=10m" -F "max_visits=1" https://dropage.online/api/upload
+```
+
+### オプションフィールド
+
+| フィールド | 値 | デフォルト | 説明 |
+| --- | --- | --- | --- |
+| `expiry` | `10m`, `1h`, `3h`, `12h` | `1h` | ページの有効期限 |
+| `max_visits` | `0`（無制限）, `1`, `10` | `0` | このアクセス数に達するとページを無効化 |
 
 ### 成功レスポンス (HTTP 201)
 
@@ -157,6 +228,7 @@ curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
   "success": true,
   "url": "https://dropage.online/{id}/",
   "expires_at": "...",
+  "max_visits": 0,
   "id": "..."
 }
 ```
@@ -182,4 +254,19 @@ curl.exe -s -F "file=@your-file.html" https://dropage.online/api/upload
 ### 備考
 
 - 成功時には公開 URL と有効期限が表示されます。
+- `max_visits` を設定した場合（1 または 10）、指定されたアクセス数に達するとページは無効になります。
+- 期限切れのレコードは 24 時間後にサーバーから物理削除されます。
 - HTTP 429（レート制限）の場合は、しばらく待ってから再試行してください。
+
+### 例
+
+```bash
+# 10分有効、1回アクセスで削除
+curl.exe -s -F "file=@index.html" -F "expiry=10m" -F "max_visits=1" https://dropage.online/api/upload
+
+# 3時間有効、アクセス無制限
+curl.exe -s -F "file=@site.zip" -F "expiry=3h" https://dropage.online/api/upload
+
+# 12時間有効、10回アクセスで削除
+curl.exe -s -F "file=@page.html" -F "expiry=12h" -F "max_visits=10" https://dropage.online/api/upload
+```
