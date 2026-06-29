@@ -2,6 +2,12 @@
   <a href="#english">English</a> · <a href="#中文">中文</a> · <a href="#日本語">日本語</a>
 </p>
 
+<p align="center">
+  可在以下平台获取 / Also available on:<br>
+  <a href="https://clawhub.ai/jiantoucn/skills/dropage-deploy">ClawHub</a> ·
+  <a href="https://skillhub.cloud.tencent.com/skills/dropage-deploy">Tencent SkillHub</a>
+</p>
+
 ---
 
 # dropage-deploy
