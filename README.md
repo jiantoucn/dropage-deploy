@@ -2,6 +2,12 @@
   <a href="#english">English</a> · <a href="#中文">中文</a> · <a href="#日本語">日本語</a>
 </p>
 
+<p align="center">
+  可在以下平台获取 / Also available on:<br>
+  <a href="https://clawhub.ai/jiantoucn/skills/dropage-deploy">ClawHub</a> ·
+  <a href="https://skillhub.cloud.tencent.com/skills/dropage-deploy">Tencent SkillHub</a>
+</p>
+
 ---
 
 # dropage-deploy
@@ -15,6 +21,10 @@ This repository contains the `dropage-deploy` skill for uploading an HTML page o
 ## English
 
 ### What it does
+
+Upload an HTML page or zip archive to [dropage.online](https://dropage.online) and get a public URL. You can choose from multiple expiry times and optional visit limits.
+
+Upload a single HTML file or an archive containing a web page, then report the public URL, its expiration time, and its optional visit limit. The default public-link lifetime is 1 hour.
 
 Upload a single HTML file or an archive containing a web page, then report the public URL, its expiration time, and its optional visit limit. The default public-link lifetime is 1 hour.
 
@@ -165,6 +175,13 @@ The API's `error` text may be Chinese regardless of the page language; use the s
 
 File retention is independent of public-link expiry. Expiry and visit limits can disable public access earlier. Existing uploads keep their expiration times.
 
+File retention is independent of public-link expiry. Expiry and visit limits can disable public access earlier. Existing uploads keep their expiration times.
+
+- On success, the public URL and expiration time will be displayed.
+- If `max_visits` is set (1 or 10), the page will be disabled after that many visits.
+- Expired records are physically deleted from the server after 24 hours.
+- On HTTP 429 (rate limited), wait and retry.
+
 ### Examples
 
 Deploy a single HTML file with defaults:
@@ -247,6 +264,19 @@ The upload exceeds 10 MB. Compress or reduce assets, or split a large project in
 - Failed uploads do not consume daily quota; successful uploads continue to count even after expiration or cleanup.
 - Do not repeatedly retry or silently select a shorter expiry.
 
+### Examples
+
+```bash
+# 10-minute expiry, deleted after 1 visit
+curl.exe -s -F "file=@index.html" -F "expiry=10m" -F "max_visits=1" https://dropage.online/api/upload
+
+# 3-hour expiry, unlimited visits
+curl.exe -s -F "file=@site.zip" -F "expiry=3h" https://dropage.online/api/upload
+
+# 12-hour expiry, deleted after 10 visits
+curl.exe -s -F "file=@page.html" -F "expiry=12h" -F "max_visits=10" https://dropage.online/api/upload
+```
+
 ---
 
 <a name="中文"></a>
@@ -296,6 +326,9 @@ The upload exceeds 10 MB. Compress or reduce assets, or split a large project in
 #### Windows（PowerShell / CMD）
 
 ```bash
+#### Windows（PowerShell / CMD）
+
+```bash
 curl.exe -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.online/api/upload
 ```
 
@@ -303,6 +336,19 @@ curl.exe -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropa
 
 ```bash
 curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.online/api/upload
+```
+
+```json
+{
+  "success": true,
+  "url": "https://dropage.online/a1b2c3d4e5f6/",
+  "expires_at": "2026-06-29T14:00:00+08:00",
+  "max_visits": 0,
+  "id": "a1b2c3d4e5f6"
+}
+```
+
+省略 `expiry` 和 `max_visits` 即使用默认值。用户指定了有效期时必须保持该请求，不得为了绕过配额而静默缩短有效期。
 ```
 
 省略 `expiry` 和 `max_visits` 即使用默认值。用户指定了有效期时必须保持该请求，不得为了绕过配额而静默缩短有效期。
@@ -342,6 +388,13 @@ curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.o
 
 文件保留时间与公开链接有效期相互独立；有效期或访问次数限制可能更早关闭公开访问。已有上传不会改变其原有过期时间。
 
+文件保留时间与公开链接有效期相互独立；有效期或访问次数限制可能更早关闭公开访问。已有上传不会改变其原有过期时间。
+
+- 成功时会显示公开链接和过期时间。
+- 若设置 `max_visits`（1 或 10），页面在达到指定访问次数后自动失效。
+- 过期的记录会在 24 小时后从服务器物理删除。
+- 遇到 HTTP 429（频率限制）时请稍后重试。
+
 ### 示例
 
 ```bash
@@ -364,7 +417,20 @@ curl -s -F "file=@index.html" -F "expiry=14d" https://dropage.online/api/upload
 - 文件为空或格式不支持：文件必须非空，扩展名必须是支持的格式（不区分大小写）；以点开头的隐藏文件不支持。
 - HTTP 400：确认扩展名和压缩包根目录的 `index.html`；压缩包不得超过 50 个文件，且不能损坏或截断。
 - HTTP 413：文件超过 10 MB，请压缩/减少资源或拆分部署。
-- HTTP 429：遵守 `Retry-After`。普通限流为每 IP 每分钟 3 次、每 30 分钟 30 次、每小时 45 次；若是 `DAILY_QUOTA_EXCEEDED`，报告档位、范围、限额和重置时间，不要循环重试或静默改短有效期。
+- HTTP 429：`Retry-After` に従います。通常の制限は IP ごとに 3/分、30/30分、45/时です。`DAILY_QUOTA_EXCEEDED` なら期間、範囲、上限、リセット時刻を伝え、再試行ループや有効期間の黙った短縮を行いません。
+
+### 示例
+
+```bash
+# 10 分钟有效，访问 1 次后失效
+curl.exe -s -F "file=@index.html" -F "expiry=10m" -F "max_visits=1" https://dropage.online/api/upload
+
+# 3 小时有效，不限访问次数
+curl.exe -s -F "file=@site.zip" -F "expiry=3h" https://dropage.online/api/upload
+
+# 12 小时有效，访问 10 次后失效
+curl.exe -s -F "file=@page.html" -F "expiry=12h" -F "max_visits=10" https://dropage.online/api/upload
+```
 
 ---
 
@@ -373,6 +439,10 @@ curl -s -F "file=@index.html" -F "expiry=14d" https://dropage.online/api/upload
 ## 日本語
 
 ### 機能
+
+HTML ページまたは zip アーカイブを [dropage.online](https://dropage.online) にアップロードし、公開 URL を取得します。複数の有効期限とオプションのアクセス制限を選択できます。
+
+`dropage-deploy` は、単一の HTML ファイルまたは Web ページを含むアーカイブを [dropage.online](https://dropage.online) にアップロードし、公開 URL、有効期限、任意のアクセス回数制限を返すスキルです。公開リンクのデフォルト有効期間は 1 時間です。
 
 `dropage-deploy` は、単一の HTML ファイルまたは Web ページを含むアーカイブを [dropage.online](https://dropage.online) にアップロードし、公開 URL、有効期限、任意のアクセス回数制限を返すスキルです。公開リンクのデフォルト有効期間は 1 時間です。
 
@@ -415,6 +485,9 @@ curl -s -F "file=@index.html" -F "expiry=14d" https://dropage.online/api/upload
 #### Windows（PowerShell / CMD）
 
 ```bash
+#### Windows（PowerShell / CMD）
+
+```bash
 curl.exe -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.online/api/upload
 ```
 
@@ -422,6 +495,19 @@ curl.exe -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropa
 
 ```bash
 curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.online/api/upload
+```
+
+```json
+{
+  "success": true,
+  "url": "https://dropage.online/a1b2c3d4e5f6/",
+  "expires_at": "2026-06-29T14:00:00+08:00",
+  "max_visits": 0,
+  "id": "a1b2c3d4e5f6"
+}
+```
+
+`expiry` と `max_visits` を省略するとデフォルト値になります。ユーザーが指定した有効期間を、クォータ回避のために黙って短縮してはいけません。
 ```
 
 `expiry` と `max_visits` を省略するとデフォルト値になります。ユーザーが指定した有効期間を、クォータ回避のために黙って短縮してはいけません。
@@ -458,6 +544,13 @@ curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.o
 | アクセスログ保持 | 30 日 |
 
 ファイル保持期間と公開リンクの有効期間は独立しています。有効期限またはアクセス回数制限により、公開アクセスが先に無効になる場合があります。既存のアップロードの有効期限は変更されません。
+
+ファイル保持期間と公開リンクの有効期間は独立しています。有効期限またはアクセス回数制限により、公開アクセスが先に無効になる場合があります。既存のアップロードの有効期限は変更されません。
+
+- 成功時には公開 URL と有効期限が表示されます。
+- `max_visits` を設定した場合（1 または 10）、指定されたアクセス数に達するとページは無効になります。
+- 期限切れのレコードは 24 時間後にサーバーから物理削除されます。
+- HTTP 429（レート制限）の場合は、しばらく待ってから再試行してください。
 
 ### 例
 
