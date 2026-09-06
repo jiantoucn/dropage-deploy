@@ -22,10 +22,6 @@ This repository contains the `dropage-deploy` skill for uploading an HTML page o
 
 ### What it does
 
-Upload an HTML page or zip archive to [dropage.online](https://dropage.online) and get a public URL. You can choose from multiple expiry times and optional visit limits.
-
-Upload a single HTML file or an archive containing a web page, then report the public URL, its expiration time, and its optional visit limit. The default public-link lifetime is 1 hour.
-
 Upload a single HTML file or an archive containing a web page, then report the public URL, its expiration time, and its optional visit limit. The default public-link lifetime is 1 hour.
 
 ### When to use it
@@ -42,7 +38,7 @@ Use this skill when the user asks to:
 
 - Single `.html` files
 - `.zip`, `.tar`, `.tar.gz`, and `.tgz` archives
-- Maximum upload size: 10 MB
+- Maximum upload size: 30 MB
 - Maximum archive entries: 50 files
 
 An archive must contain `index.html` at the root level. If every entry is under one common top-level directory, Dropage strips that directory before checking the root. Do not use `.7z`, `.rar`, `.tar.bz2`, or `.tar.xz`. Avoid Chinese or other special characters in archive filenames to prevent encoding problems.
@@ -155,6 +151,9 @@ Use `-i` when the HTTP status and `Retry-After` header are needed:
 
 ```bash
 curl.exe -sS -i -F "file=@page.html" -F "expiry=14d" https://dropage.online/api/upload
+
+# macOS/Linux
+curl -sS -i -F "file=@page.html" -F "expiry=14d" https://dropage.online/api/upload
 ```
 
 The API's `error` text may be Chinese regardless of the page language; use the structured fields to explain the result in the user's language.
@@ -164,7 +163,7 @@ The API's `error` text may be Chinese regardless of the page language; use the s
 | Item | Limit or behavior |
 | --- | --- |
 | File types | `.html`, `.zip`, `.tar`, `.tar.gz`, `.tgz` only |
-| Max size | 10 MB |
+| Max size | 30 MB |
 | Archive | `index.html` at root after common-directory stripping; max 50 files |
 | Expiry | `1h` / `6h` / `24h` / `7d` / `14d` |
 | Visit limit | `0` (unlimited) / `1` / `10` |
@@ -175,14 +174,9 @@ The API's `error` text may be Chinese regardless of the page language; use the s
 
 File retention is independent of public-link expiry. Expiry and visit limits can disable public access earlier. Existing uploads keep their expiration times.
 
-File retention is independent of public-link expiry. Expiry and visit limits can disable public access earlier. Existing uploads keep their expiration times.
+### Legacy compatibility examples (old clients only)
 
-- On success, the public URL and expiration time will be displayed.
-- If `max_visits` is set (1 or 10), the page will be disabled after that many visits.
-- Expired records are physically deleted from the server after 24 hours.
-- On HTTP 429 (rate limited), wait and retry.
-
-### Examples
+These expiry values are accepted only for compatibility with old clients. New uploads must use the five current expiry values above; a successful legacy response includes the `LEGACY_EXPIRY` warning and should not be retried.
 
 Deploy a single HTML file with defaults:
 
@@ -255,7 +249,7 @@ Use only `.html`, `.zip`, `.tar`, `.tar.gz`, or `.tgz`. `.htm`, `.xhtml`, `.rar`
 
 #### HTTP 413 — payload too large
 
-The upload exceeds 10 MB. Compress or reduce assets, or split a large project into multiple deployments.
+The upload exceeds 30 MB. Compress or reduce assets, or split a large project into multiple deployments.
 
 #### HTTP 429 — too many requests
 
@@ -303,7 +297,7 @@ curl.exe -s -F "file=@page.html" -F "expiry=12h" -F "max_visits=10" https://drop
 
 - 单个 `.html` 文件
 - `.zip`、`.tar`、`.tar.gz`、`.tgz` 压缩包
-- 最大上传大小：10 MB
+- 最大上传大小：30 MB
 - 压缩包最多 50 个文件
 
 压缩包根目录必须包含 `index.html`。如果所有条目都位于同一个顶层目录中，Dropage 会在检查根目录前自动移除该目录。`.7z`、`.rar`、`.tar.bz2` 和 `.tar.xz` 不支持；压缩包文件名应避免使用中文或其他特殊字符，以免发生编码问题。
@@ -326,9 +320,6 @@ curl.exe -s -F "file=@page.html" -F "expiry=12h" -F "max_visits=10" https://drop
 #### Windows（PowerShell / CMD）
 
 ```bash
-#### Windows（PowerShell / CMD）
-
-```bash
 curl.exe -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.online/api/upload
 ```
 
@@ -337,6 +328,8 @@ curl.exe -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropa
 ```bash
 curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.online/api/upload
 ```
+
+省略 `expiry` 和 `max_visits` 即使用默认值。用户指定了有效期时必须保持该请求，不得为了绕过配额而静默缩短有效期。
 
 ```json
 {
@@ -348,10 +341,14 @@ curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.o
 }
 ```
 
-省略 `expiry` 和 `max_visits` 即使用默认值。用户指定了有效期时必须保持该请求，不得为了绕过配额而静默缩短有效期。
-```
+失败时返回 HTTP 4xx，并包含错误原因：
 
-省略 `expiry` 和 `max_visits` 即使用默认值。用户指定了有效期时必须保持该请求，不得为了绕过配额而静默缩短有效期。
+```json
+{
+  "success": false,
+  "error": "reason"
+}
+```
 
 ### 响应处理
 
@@ -372,12 +369,22 @@ curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.o
 
 进行 `7d` 或 `14d` 上传前，应告知用户该档位的全站/单 IP 限额和下一次重置时间。若返回 `DAILY_QUOTA_EXCEEDED`，报告 `expiry`、`scope`（`ip` 或 `global`）、`limit` 和 `reset_at`。被拒绝的上传不会生成公开链接或上传记录，也不会额外消耗每日配额；应等待重置或让用户选择其他档位，不要循环重试或静默改短有效期。如果单 IP 和全站每日配额同时耗尽，API 会优先返回 `scope: "ip"`。
 
+需要查看 HTTP 状态和 `Retry-After` 时：
+
+```bash
+# Windows
+curl.exe -sS -i -F "file=@page.html" -F "expiry=14d" https://dropage.online/api/upload
+
+# macOS/Linux
+curl -sS -i -F "file=@page.html" -F "expiry=14d" https://dropage.online/api/upload
+```
+
 ### 限制与保留
 
 | 项目 | 限制或行为 |
 | --- | --- |
 | 文件类型 | 仅 `.html`、`.zip`、`.tar`、`.tar.gz`、`.tgz` |
-| 最大大小 | 10 MB |
+| 最大大小 | 30 MB |
 | 压缩包 | 自动移除公共顶层目录后，根目录必须有 `index.html`；最多 50 个文件 |
 | 有效期 | `1h` / `6h` / `24h` / `7d` / `14d` |
 | 访问次数 | `0`（不限）/ `1` / `10` |
@@ -387,13 +394,6 @@ curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.o
 | 访问日志保留 | 30 天 |
 
 文件保留时间与公开链接有效期相互独立；有效期或访问次数限制可能更早关闭公开访问。已有上传不会改变其原有过期时间。
-
-文件保留时间与公开链接有效期相互独立；有效期或访问次数限制可能更早关闭公开访问。已有上传不会改变其原有过期时间。
-
-- 成功时会显示公开链接和过期时间。
-- 若设置 `max_visits`（1 或 10），页面在达到指定访问次数后自动失效。
-- 过期的记录会在 24 小时后从服务器物理删除。
-- 遇到 HTTP 429（频率限制）时请稍后重试。
 
 ### 示例
 
@@ -416,10 +416,12 @@ curl -s -F "file=@index.html" -F "expiry=14d" https://dropage.online/api/upload
 - 文件不存在：确认路径存在；Windows 可使用反斜杠或绝对路径，macOS/Linux 使用正斜杠；路径包含空格时请引用整个表单值。
 - 文件为空或格式不支持：文件必须非空，扩展名必须是支持的格式（不区分大小写）；以点开头的隐藏文件不支持。
 - HTTP 400：确认扩展名和压缩包根目录的 `index.html`；压缩包不得超过 50 个文件，且不能损坏或截断。
-- HTTP 413：文件超过 10 MB，请压缩/减少资源或拆分部署。
-- HTTP 429：`Retry-After` に従います。通常の制限は IP ごとに 3/分、30/30分、45/时です。`DAILY_QUOTA_EXCEEDED` なら期間、範囲、上限、リセット時刻を伝え、再試行ループや有効期間の黙った短縮を行いません。
+- HTTP 413：文件超过 30 MB，请压缩/减少资源或拆分部署。
+- HTTP 429：检查 JSON 的 `code` 和 `Retry-After`。普通限流遵守 `Retry-After`；若是 `DAILY_QUOTA_EXCEEDED`，报告档位、范围、限额和重置时间，不要循环重试或静默改短有效期。
 
-### 示例
+### 旧客户端兼容示例
+
+以下有效期仅用于兼容旧客户端。新上传必须使用上方五种当前有效期；成功响应会包含 `LEGACY_EXPIRY` 警告，且不应重试。
 
 ```bash
 # 10 分钟有效，访问 1 次后失效
@@ -440,10 +442,6 @@ curl.exe -s -F "file=@page.html" -F "expiry=12h" -F "max_visits=10" https://drop
 
 ### 機能
 
-HTML ページまたは zip アーカイブを [dropage.online](https://dropage.online) にアップロードし、公開 URL を取得します。複数の有効期限とオプションのアクセス制限を選択できます。
-
-`dropage-deploy` は、単一の HTML ファイルまたは Web ページを含むアーカイブを [dropage.online](https://dropage.online) にアップロードし、公開 URL、有効期限、任意のアクセス回数制限を返すスキルです。公開リンクのデフォルト有効期間は 1 時間です。
-
 `dropage-deploy` は、単一の HTML ファイルまたは Web ページを含むアーカイブを [dropage.online](https://dropage.online) にアップロードし、公開 URL、有効期限、任意のアクセス回数制限を返すスキルです。公開リンクのデフォルト有効期間は 1 時間です。
 
 > このリポジトリにはスキル文書だけが含まれ、Dropage のサーバーコード、クライアントコード、自動テストは含まれません。以下の制限とレスポンスは現在の `SKILL.md` 契約を示します。
@@ -462,7 +460,7 @@ HTML ページまたは zip アーカイブを [dropage.online](https://dropage.
 
 - 単一の `.html` ファイル
 - `.zip`、`.tar`、`.tar.gz`、`.tgz` アーカイブ
-- 最大アップロードサイズ：10 MB
+- 最大アップロードサイズ：30 MB
 - アーカイブ内の最大ファイル数：50
 
 アーカイブのルートには `index.html` が必要です。すべてのエントリが同じトップレベルディレクトリに入っている場合、Dropage はルート確認前にそのディレクトリを自動的に除去します。`.7z`、`.rar`、`.tar.bz2`、`.tar.xz` は非対応です。文字コード問題を避けるため、アーカイブのファイル名には中国語や特殊文字をできるだけ使用しないでください。
@@ -485,9 +483,6 @@ HTML ページまたは zip アーカイブを [dropage.online](https://dropage.
 #### Windows（PowerShell / CMD）
 
 ```bash
-#### Windows（PowerShell / CMD）
-
-```bash
 curl.exe -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.online/api/upload
 ```
 
@@ -496,6 +491,8 @@ curl.exe -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropa
 ```bash
 curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.online/api/upload
 ```
+
+`expiry` と `max_visits` を省略するとデフォルト値になります。ユーザーが指定した有効期間を、クォータ回避のために黙って短縮してはいけません。
 
 ```json
 {
@@ -507,10 +504,14 @@ curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.o
 }
 ```
 
-`expiry` と `max_visits` を省略するとデフォルト値になります。ユーザーが指定した有効期間を、クォータ回避のために黙って短縮してはいけません。
-```
+失敗時は HTTP 4xx とエラー理由が返ります：
 
-`expiry` と `max_visits` を省略するとデフォルト値になります。ユーザーが指定した有効期間を、クォータ回避のために黙って短縮してはいけません。
+```json
+{
+  "success": false,
+  "error": "reason"
+}
+```
 
 ### レスポンス処理
 
@@ -529,12 +530,22 @@ curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.o
 
 `7d` または `14d` を使う前に、選択した期間のサイト全体/IP ごとの上限と次のリセット時刻を伝えます。`DAILY_QUOTA_EXCEEDED` の場合は `expiry`、`scope`（`ip` または `global`）、`limit`、`reset_at` を伝えてください。拒否されたアップロードには公開 URL やレコードは作成されず、追加のクォータも消費しません。リセットを待つか別の期間を選んでもらい、再試行ループや有効期間の黙った変更は行わないでください。IP ごととサイト全体のクォータが同時に尽きた場合、API は先に `scope: "ip"` を返します。
 
+HTTP ステータスと `Retry-After` を確認する場合：
+
+```bash
+# Windows
+curl.exe -sS -i -F "file=@page.html" -F "expiry=14d" https://dropage.online/api/upload
+
+# macOS/Linux
+curl -sS -i -F "file=@page.html" -F "expiry=14d" https://dropage.online/api/upload
+```
+
 ### 制限と保持期間
 
 | 項目 | 制限または動作 |
 | --- | --- |
 | ファイル形式 | `.html`、`.zip`、`.tar`、`.tar.gz`、`.tgz` のみ |
-| 最大サイズ | 10 MB |
+| 最大サイズ | 30 MB |
 | アーカイブ | 共通トップレベルディレクトリ除去後のルートに `index.html`、最大 50 ファイル |
 | 有効期間 | `1h` / `6h` / `24h` / `7d` / `14d` |
 | アクセス回数 | `0`（無制限）/ `1` / `10` |
@@ -544,13 +555,6 @@ curl -s -F "file=@<filepath>" -F "expiry=1h" -F "max_visits=0" https://dropage.o
 | アクセスログ保持 | 30 日 |
 
 ファイル保持期間と公開リンクの有効期間は独立しています。有効期限またはアクセス回数制限により、公開アクセスが先に無効になる場合があります。既存のアップロードの有効期限は変更されません。
-
-ファイル保持期間と公開リンクの有効期間は独立しています。有効期限またはアクセス回数制限により、公開アクセスが先に無効になる場合があります。既存のアップロードの有効期限は変更されません。
-
-- 成功時には公開 URL と有効期限が表示されます。
-- `max_visits` を設定した場合（1 または 10）、指定されたアクセス数に達するとページは無効になります。
-- 期限切れのレコードは 24 時間後にサーバーから物理削除されます。
-- HTTP 429（レート制限）の場合は、しばらく待ってから再試行してください。
 
 ### 例
 
@@ -573,5 +577,5 @@ curl -s -F "file=@index.html" -F "expiry=14d" https://dropage.online/api/upload
 - ファイルが見つからない：パスが存在することを確認します。Windows はバックスラッシュまたは絶対パス、macOS/Linux はスラッシュを使用し、空白を含むパスはフォーム値全体を引用します。
 - 空ファイルまたは非対応形式：空でないファイルで、対応する拡張子（大文字小文字は不問）を使用します。ドットで始まる隠しファイルは非対応です。
 - HTTP 400：拡張子と、アーカイブのルートにある `index.html` を確認します。ファイル数は 50 以下、アーカイブは破損・切り詰め状態でない必要があります。
-- HTTP 413：10 MB を超えています。アセットを圧縮・削減するか、複数のデプロイに分割します。
-- HTTP 429：`Retry-After` に従います。通常の制限は IP ごとに 3/分、30/30分、45/時です。`DAILY_QUOTA_EXCEEDED` なら期間、範囲、上限、リセット時刻を伝え、再試行ループや有効期間の黙った短縮を行いません。
+- HTTP 413：30 MB を超えています。アセットを圧縮・削減するか、複数のデプロイに分割します。
+- HTTP 429：JSON の `code` と `Retry-After` を確認します。通常のレート制限では `Retry-After` に従い、`DAILY_QUOTA_EXCEEDED` なら期間、範囲、上限、リセット時刻を伝えます。再試行ループや有効期間の黙った短縮は行いません。

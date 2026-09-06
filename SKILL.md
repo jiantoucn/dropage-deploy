@@ -33,6 +33,7 @@ Both are optional; omit to use defaults.
 The tiers have separate quotas. Each resets at 00:00 UTC+8 on the next calendar day. Only successful uploads count, including records later expired or cleaned; deletion does not refund quota. The `1h`, `6h`, and `24h` tiers have no extra daily quota. All tiers still follow per-IP rate limits and the site-wide 1,000 uploads/hour limit.
 
 Before a 7-day or 14-day upload, tell the user the selected tier's site-wide and per-IP daily limits and reset time. Use the requested expiry; if it is unspecified, use 1 hour. Never silently shorten a requested expiry to bypass an exhausted quota. Existing uploaded pages keep their expiration times; use the five current values for new uploads. The API still accepts legacy `10m`, `3h`, and `12h` for old clients. A successful legacy response adds `warning: {code: "LEGACY_EXPIRY", message: "...", skill_url: "https://dropage.online/dropage-deploy.md"}`. Report that the upload succeeded, ask the user to update their installed skill from `skill_url`, and do not retry the successful upload.
+
 ## Steps
 
 1. Identify the file to deploy. Accept a single `.html` file or an archive (`.zip`, `.tar`, `.tar.gz`, `.tgz`) whose root contains `index.html`.
@@ -146,16 +147,13 @@ On failure, show the error reason. For HTTP 429, inspect `code` and `Retry-After
 ## Limits
 
 - File types: `.html`, `.zip`, `.tar`, `.tar.gz`, `.tgz` only
-- Max size: 10 MB
-- File types: `.html`, `.zip`, `.tar`, `.tar.gz`, `.tgz` only
-- Max size: 10 MB
+- Max size: 30 MB
 - Archive must contain `index.html` at the root level
 - Max 50 files per archive
 - Expiry: `1h` (default) / `6h` / `24h` / `7d` / `14d`
 - Max visits: `0` (unlimited, default) / `1` / `10`
 - Storage retention: uploaded files are physically deleted 30 days after upload; database metadata is retained. Expiry and visit limits still disable public access earlier.
 - Access log retention: 30 days
-- Rate limit: 3 per minute, 30 per half hour, 45 per hour per IP
 - Rate limit: 3 per minute, 30 per half hour, 45 per hour per IP
 
 ## Examples
@@ -212,6 +210,7 @@ curl -s -F "file=@index.html" -F "expiry=14d" https://dropage.online/api/upload
 ```
 
 For 6-hour or 24-hour expiry, use `-F "expiry=6h"` or `-F "expiry=24h"` respectively.
+
 ### Deploy from specific path
 
 ```bash
@@ -245,7 +244,7 @@ curl -s -F "file=@/home/user/project/index.html" https://dropage.online/api/uplo
 - For tar.gz: ensure the file is a valid gzip-compressed tar (not raw gzip of a single file)
 
 ### HTTP 413 (Payload Too Large)
-- File exceeds the 10 MB limit
+- File exceeds the 30 MB limit
 - Compress images or assets before deploying
 - For large projects, consider splitting into multiple deployments
 
